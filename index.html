@@ -132,6 +132,49 @@
     .conn { font-size: 10px; letter-spacing: 1px; margin-bottom: 14px; }
     .conn.ok { color: #7da06a; }
     .conn.err { color: var(--red); }
+    .change-url {
+      margin-top: 20px; width: min(94vw, 460px);
+      border: 1px solid var(--brass-dark); border-radius: 10px;
+      background: transparent; color: var(--muted);
+      font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px;
+      padding: 9px; cursor: pointer; line-height: 1.4;
+    }
+    .change-url:hover { background: rgba(201,162,83,.12); color: var(--brass-light); }
+    /* 首次设定页 */
+    .setup-wrap {
+      min-height: 100vh; width: 100%;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .setup-card {
+      background: linear-gradient(180deg, var(--wood-light), var(--wood));
+      border: 2px solid var(--brass-dark); border-radius: 16px;
+      padding: 30px 26px; max-width: 420px; width: 100%; text-align: center;
+      box-shadow: inset 0 1px 0 rgba(230,200,122,.25), 0 12px 26px rgba(0,0,0,.55);
+    }
+    .setup-hint {
+      font-family: Georgia, 'Songti SC', serif; font-size: 13px; color: var(--face);
+      text-align: left; line-height: 1.7; margin-bottom: 12px;
+    }
+    .setup-eg { color: var(--muted); font-size: 11px; }
+    .setup-input {
+      width: 100%; padding: 11px; border: 1px solid var(--brass-dark); border-radius: 9px;
+      background: rgba(0,0,0,.25); color: var(--face);
+      font-family: 'Cinzel', monospace; font-size: 13px; outline: none;
+      box-sizing: border-box; margin-bottom: 10px;
+    }
+    .setup-input:focus { border-color: var(--brass-light); }
+    .setup-err { font-size: 11px; color: #e08a5a; margin-bottom: 10px; font-family: Georgia, serif; }
+    .setup-btn {
+      width: 100%; padding: 11px; border: 1px solid var(--brass-light); border-radius: 9px;
+      background: var(--brass); color: var(--ink); font-weight: 700;
+      font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 1px;
+      cursor: pointer; line-height: 1.4;
+    }
+    .setup-btn:disabled { opacity: .5; cursor: default; }
+    .setup-foot {
+      font-family: Georgia, 'Songti SC', serif; font-size: 10px; color: var(--muted);
+      margin-top: 16px; line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -139,10 +182,25 @@
   <script>
     const h = React.createElement;
 
-    // ── 配置 ──
-    const SUPABASE_URL = "https://kfgtrcdjusfljnvmwpsu.supabase.co";
-    const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmZ3RyY2RqdXNmbGpudm13cHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODk2MzgsImV4cCI6MjA5Mjg2NTYzOH0.emJ-V3ByfiEjEO21jE-azeyKe-cY8j1UP8pNw5vNAv4";
-    const API = SUPABASE_URL + "/functions/v1/lumos-api";
+    // ── 配置：Supabase URL 从 hash / localStorage 取，不写死 ──
+    // 支持 #https://xxx.supabase.co 直接带入；否则走首次设定页 SetupScreen
+    function getApiUrl() {
+      try {
+        const hash = window.location.hash.slice(1);
+        if (hash && hash.startsWith("http")) {
+          const full = hash.replace(/\/$/, "") + "/functions/v1/lumos-api";
+          localStorage.setItem("lumos_api_url", full);
+          return full;
+        }
+        return localStorage.getItem("lumos_api_url") || "";
+      } catch (e) {
+        return "";
+      }
+    }
+    function setApiUrl(url) {
+      try { localStorage.setItem("lumos_api_url", url); } catch (e) {}
+    }
+    let API = getApiUrl();
     const POLL_MS = 20000;
 
     // ── 九个状态（围钟一圈，12 点起顺时针）──
@@ -195,18 +253,17 @@
       return "sleeping";              // 大部分时间：睡觉
     }
 
-    // ── API ──
-    function apiHeaders() {
-      return { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY };
-    }
+    // ── API（Edge Function verify_jwt=false，无需 anon key）──
     async function fetchStatus() {
-      const res = await fetch(API + "/status", { headers: apiHeaders() });
+      const res = await fetch(API + "/status", { headers: { "Content-Type": "application/json" } });
       if (!res.ok) throw new Error("status " + res.status);
       return res.json();
     }
     async function patchStatus(entityId, body) {
       const res = await fetch(API + "/status/" + entityId, {
-        method: "PATCH", headers: apiHeaders(), body: JSON.stringify(body),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("patch " + res.status);
       return res.json();
@@ -306,8 +363,60 @@
       return h("div", { className: "card" }, head, modeRow, chips);
     }
 
+    // ── 首次设定页：填 Supabase Project URL ──
+    function SetupScreen({ onDone }) {
+      const [url, setUrl] = React.useState("");
+      const [testing, setTesting] = React.useState(false);
+      const [err, setErr] = React.useState("");
+
+      const doConnect = async () => {
+        setTesting(true);
+        setErr("");
+        const base = url.trim().replace(/\/$/, "");
+        const full = base + "/functions/v1/lumos-api";
+        try {
+          const res = await fetch(full + "/health", { headers: { "Content-Type": "application/json" } });
+          if (!res.ok) throw new Error("" + res.status);
+          setApiUrl(full);
+          API = full;
+          window.location.hash = base;
+          onDone();
+        } catch (e) {
+          setErr("连接失败 — 请确认 URL 正确且 lumos-api 已部署");
+        }
+        setTesting(false);
+      };
+
+      return h("div", { className: "setup-wrap" },
+        h("div", { className: "setup-card" },
+          h("div", { className: "brand", style: { fontSize: 30, marginBottom: 2 } }, "LUMOS"),
+          h("div", { className: "tagline", style: { marginBottom: 18 } }, "First-time Setup · 首次设定"),
+          h("div", { className: "setup-hint" },
+            "输入你的 Supabase Project URL：",
+            h("br", null),
+            h("span", { className: "setup-eg" }, "例如 https://xxxxx.supabase.co")
+          ),
+          h("input", {
+            className: "setup-input",
+            value: url,
+            onChange: (e) => setUrl(e.target.value),
+            placeholder: "https://xxxxx.supabase.co",
+            onKeyDown: (e) => { if (e.key === "Enter" && url.trim() && !testing) doConnect(); },
+          }),
+          err && h("div", { className: "setup-err" }, err),
+          h("button", {
+            className: "setup-btn",
+            onClick: doConnect,
+            disabled: !url.trim() || testing,
+          }, testing ? "测试中…" : "连接 Connect"),
+          h("div", { className: "setup-foot" }, "需要先完成 Supabase 部署（clock_status 表 + lumos-api）")
+        )
+      );
+    }
+
     // ── App ──
     function App() {
+      const [ready, setReady] = React.useState(!!getApiUrl());
       const [rows, setRows] = React.useState([]);
       const [conn, setConn] = React.useState("loading"); // loading | ok | err
       const rowsRef = React.useRef([]);
@@ -351,6 +460,7 @@
       }, [load]);
 
       React.useEffect(() => {
+        if (!ready) return;
         let alive = true;
         (async () => {
           const data = await load();
@@ -361,7 +471,7 @@
           if (alive && data) runAuto(data);
         }, POLL_MS);
         return () => { alive = false; clearInterval(id); };
-      }, [load, runAuto]);
+      }, [ready, load, runAuto]);
 
       // 乐观更新 + 持久化
       const optimistic = (entityId, patch) => {
@@ -380,6 +490,14 @@
         }).catch(() => setConn("err"));
       };
 
+      const changeUrl = () => {
+        try { localStorage.removeItem("lumos_api_url"); } catch (e) {}
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        window.location.reload();
+      };
+
+      if (!ready) return h(SetupScreen, { onDone: () => setReady(true) });
+
       const byId = (id) => rows.find((r) => r.entity_id === id);
       const connText = conn === "ok" ? "● 已连接钟面" : conn === "err" ? "● 连接失败，稍后重试" : "● 连接中…";
 
@@ -393,6 +511,7 @@
           byId("owl") && h(ControlCard, { key: "owl", row: byId("owl"), locked: false, onSetStatus: setStatus("owl"), onSetMode: setMode("owl") }),
           byId("crab") && h(ControlCard, { key: "crab", row: byId("crab"), locked: true })
         ),
+        h("button", { className: "change-url", onClick: changeUrl }, "更换 Supabase URL"),
         h("div", { className: "footer" }, "Mischief Managed")
       );
     }
