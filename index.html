@@ -68,7 +68,7 @@
       letter-spacing: 1px;
       dominant-baseline: middle;
     }
-    .hand { transition: transform .9s cubic-bezier(.34,1.4,.5,1); transform-origin: 200px 200px; }
+    .hand { transition: transform .9s cubic-bezier(.34,1.4,.5,1); transform-box: view-box; transform-origin: 220px 220px; }
     .panel {
       width: min(94vw, 460px);
       display: flex;
@@ -330,7 +330,7 @@
         const { id, row, st, deg, tipY } = d;
         const shaft = [
           [C - 4.5, C + 10], [C + 4.5, C + 10],
-          [C + 2.2, tipY + 26], [C - 2.2, tipY + 26],
+          [C + 2.2, tipY + 14], [C - 2.2, tipY + 14],
         ].map((p) => p.join(",")).join(" ");
         const portrait = avatars && avatars[id]
           ? h("image", { href: avatars[id], xlinkHref: avatars[id], x: C - 14, y: tipY - 17.5, width: 28, height: 35, preserveAspectRatio: "xMidYMid slice", clipPath: "url(#clip-" + id + ")" })
