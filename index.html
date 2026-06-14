@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lumos · 韦斯莱时钟</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet" />
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    :root {
+      --bg: #1b130c;
+      --wood: #2c1e12;
+      --wood-light: #3a2818;
+      --brass: #c9a253;
+      --brass-light: #e6c87a;
+      --brass-dark: #8a6a2f;
+      --face: #f1e2c0;
+      --face-edge: #e3cd9c;
+      --ink: #3a2a18;
+      --muted: #7a6647;
+      --red: #7a2d1f;
+      --gold: #d4af37;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background:
+        radial-gradient(circle at 50% 0%, #2c1e12 0%, var(--bg) 60%) fixed,
+        var(--bg);
+      color: var(--face);
+      font-family: 'Cinzel', Georgia, 'Songti SC', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 14px 60px;
+    }
+    .brand {
+      font-family: 'Cinzel Decorative', 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 34px;
+      letter-spacing: 6px;
+      color: var(--brass-light);
+      text-shadow: 0 1px 0 var(--brass-dark), 0 2px 6px rgba(0,0,0,.6);
+      margin: 4px 0 2px;
+    }
+    .tagline {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      text-transform: uppercase;
+    }
+    .clock-wrap {
+      width: min(92vw, 420px);
+      aspect-ratio: 1 / 1;
+      margin-bottom: 26px;
+      filter: drop-shadow(0 14px 26px rgba(0,0,0,.55));
+    }
+    .clock-wrap svg { width: 100%; height: 100%; display: block; }
+    .status-label {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 11px;
+      fill: var(--ink);
+      letter-spacing: .5px;
+    }
+    .status-cn {
+      font-family: Georgia, 'Songti SC', serif;
+      font-size: 11.5px;
+      fill: var(--ink);
+    }
+    .hand { transition: transform .9s cubic-bezier(.34,1.4,.5,1); transform-origin: 200px 200px; }
+    .panel {
+      width: min(94vw, 460px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      background: linear-gradient(180deg, var(--wood-light), var(--wood));
+      border: 2px solid var(--brass-dark);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: inset 0 1px 0 rgba(230,200,122,.25), 0 4px 10px rgba(0,0,0,.4);
+    }
+    .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .card-icon { font-size: 26px; line-height: 1; }
+    .card-name { font-size: 17px; color: var(--brass-light); letter-spacing: 1px; flex: 1; }
+    .card-now {
+      font-family: Georgia, 'Songti SC', serif;
+      font-size: 13px; color: var(--face);
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--brass-dark);
+      border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+    }
+    .mode-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .mode-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+    .toggle {
+      display: inline-flex; border: 1px solid var(--brass-dark); border-radius: 999px;
+      overflow: hidden; background: rgba(0,0,0,.25);
+    }
+    .toggle button {
+      border: none; background: transparent; color: var(--muted);
+      font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px;
+      padding: 4px 14px; cursor: pointer; line-height: 1.4;
+    }
+    .toggle button.on { background: var(--brass); color: var(--ink); font-weight: 700; }
+    .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .chip {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      border: 1px solid var(--brass-dark); border-radius: 9px;
+      background: rgba(0,0,0,.2); color: var(--face);
+      font-family: Georgia, 'Songti SC', serif; font-size: 12px;
+      padding: 7px 4px; cursor: pointer; line-height: 1.3;
+      transition: background .15s, border-color .15s;
+    }
+    .chip:hover { background: rgba(201,162,83,.18); }
+    .chip.active {
+      background: var(--brass); color: var(--ink); font-weight: 700;
+      border-color: var(--brass-light);
+      box-shadow: 0 0 0 1px var(--brass-light);
+    }
+    .chip .e { font-size: 14px; }
+    .locked-note {
+      display: flex; align-items: center; gap: 6px;
+      font-family: Georgia, 'Songti SC', serif; font-size: 12px; color: var(--muted);
+    }
+    .footer { margin-top: 26px; font-size: 10px; letter-spacing: 2px; color: var(--muted); }
+    .conn { font-size: 10px; letter-spacing: 1px; margin-bottom: 14px; }
+    .conn.ok { color: #7da06a; }
+    .conn.err { color: var(--red); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const h = React.createElement;
+
+    // ── 配置 ──
+    const SUPABASE_URL = "https://kfgtrcdjusfljnvmwpsu.supabase.co";
+    const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmZ3RyY2RqdXNmbGpudm13cHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODk2MzgsImV4cCI6MjA5Mjg2NTYzOH0.emJ-V3ByfiEjEO21jE-azeyKe-cY8j1UP8pNw5vNAv4";
+    const API = SUPABASE_URL + "/functions/v1/lumos-api";
+    const POLL_MS = 20000;
+
+    // ── 九个状态（围钟一圈，12 点起顺时针）──
+    const STATUSES = [
+      { key: "home",     emoji: "🏠", label: "在家" },
+      { key: "work",     emoji: "💼", label: "在上班" },
+      { key: "overtime", emoji: "🔥", label: "在加班" },
+      { key: "slacking", emoji: "🐟", label: "在摸鱼" },
+      { key: "travel",   emoji: "🚶", label: "在路上" },
+      { key: "playing",  emoji: "🎮", label: "在玩" },
+      { key: "sleeping", emoji: "💤", label: "在睡觉" },
+      { key: "study",    emoji: "📚", label: "在学习" },
+      { key: "peril",    emoji: "⚠️", label: "性命攸关" },
+    ];
+    const STATUS_INDEX = Object.fromEntries(STATUSES.map((s, i) => [s.key, i]));
+    const statusMeta = (key) => STATUSES[STATUS_INDEX[key]] || STATUSES[0];
+
+    // 指针外观：长度不同避免重叠
+    const HAND_STYLE = {
+      cloud: { len: 134, color: "#cfd8dc" },
+      crab:  { len: 108, color: "#e08a5a" },
+      owl:   { len: 82,  color: "#f0e6d2" },
+    };
+
+    // ── 自动逻辑 ──
+    function cloudAutoStatus(now) {
+      const day = now.getDay();                 // 0 周日 .. 6 周六
+      const weekday = day >= 1 && day <= 5;
+      const mins = now.getHours() * 60 + now.getMinutes();
+      if (mins < 7 * 60) return "sleeping";       // 0:00–7:00 睡觉
+      if (weekday && mins >= 8 * 60 + 30 && mins < 17 * 60 + 30) return "work"; // 工作日 8:30–17:30 上班
+      return "home";                              // 其余在家
+    }
+    function nextAutoBoundary(now) {
+      const marks = [7 * 60, 8 * 60 + 30, 17 * 60 + 30, 24 * 60];
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const next = marks.find((m) => m > mins);
+      const d = new Date(now);
+      if (next === undefined || next >= 24 * 60) {
+        d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0);
+      } else {
+        d.setHours(Math.floor(next / 60), next % 60, 0, 0);
+      }
+      return d.toISOString();
+    }
+    function owlAutoRoll() {
+      const r = Math.random();
+      if (r < 0.03) return "peril";   // 极小概率：性命攸关（搞笑）
+      if (r < 0.25) return "travel";  // 偶尔：出去送信
+      return "sleeping";              // 大部分时间：睡觉
+    }
+
+    // ── API ──
+    function apiHeaders() {
+      return { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY };
+    }
+    async function fetchStatus() {
+      const res = await fetch(API + "/status", { headers: apiHeaders() });
+      if (!res.ok) throw new Error("status " + res.status);
+      return res.json();
+    }
+    async function patchStatus(entityId, body) {
+      const res = await fetch(API + "/status/" + entityId, {
+        method: "PATCH", headers: apiHeaders(), body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("patch " + res.status);
+      return res.json();
+    }
+
+    // ── 钟面 ──
+    function Clock({ rows }) {
+      const C = 200, R = 150, rLabel = 168;
+      const ticks = [];
+      const labels = [];
+      STATUSES.forEach((s, i) => {
+        const ang = (i * 40 - 90) * Math.PI / 180;
+        const lx = C + rLabel * Math.cos(ang);
+        const ly = C + rLabel * Math.sin(ang);
+        const tx1 = C + (R - 6) * Math.cos(ang), ty1 = C + (R - 6) * Math.sin(ang);
+        const tx2 = C + R * Math.cos(ang), ty2 = C + R * Math.sin(ang);
+        ticks.push(h("line", { key: "t" + i, x1: tx1, y1: ty1, x2: tx2, y2: ty2, stroke: "#8a6a2f", strokeWidth: 2 }));
+        labels.push(
+          h("g", { key: "l" + i, textAnchor: "middle" },
+            h("text", { x: lx, y: ly - 4, fontSize: 17 }, s.emoji),
+            h("text", { x: lx, y: ly + 13, className: "status-cn" }, s.label)
+          )
+        );
+      });
+
+      const hands = ["cloud", "crab", "owl"].map((id) => {
+        const row = rows.find((r) => r.entity_id === id);
+        if (!row) return null;
+        const st = HAND_STYLE[id];
+        const idx = STATUS_INDEX[row.status] ?? 0;
+        const deg = idx * 40; // 0 = 指向 12 点（已经把 12 点设为 index0）
+        const tipY = C - st.len;
+        return h("g", { key: id, className: "hand", style: { transform: "rotate(" + deg + "deg)" } },
+          h("line", { x1: C, y1: C, x2: C, y2: C - st.len + 14, stroke: st.color, strokeWidth: 4, strokeLinecap: "round" }),
+          h("circle", { cx: C, cy: tipY, r: 15, fill: "#2c1e12", stroke: st.color, strokeWidth: 2 }),
+          h("text", { x: C, y: tipY + 6, textAnchor: "middle", fontSize: 16 }, row.icon)
+        );
+      });
+
+      return h("div", { className: "clock-wrap" },
+        h("svg", { viewBox: "0 0 400 400" },
+          h("defs", null,
+            h("radialGradient", { id: "face", cx: "50%", cy: "42%", r: "62%" },
+              h("stop", { offset: "0%", stopColor: "#f6ead0" }),
+              h("stop", { offset: "100%", stopColor: "#e3cd9c" })
+            ),
+            h("linearGradient", { id: "brass", x1: "0", y1: "0", x2: "0", y2: "1" },
+              h("stop", { offset: "0%", stopColor: "#e6c87a" }),
+              h("stop", { offset: "50%", stopColor: "#c9a253" }),
+              h("stop", { offset: "100%", stopColor: "#8a6a2f" })
+            )
+          ),
+          h("circle", { cx: C, cy: C, r: 195, fill: "url(#brass)" }),
+          h("circle", { cx: C, cy: C, r: 182, fill: "#2c1e12" }),
+          h("circle", { cx: C, cy: C, r: 176, fill: "url(#brass)" }),
+          h("circle", { cx: C, cy: C, r: 164, fill: "url(#face)", stroke: "#8a6a2f", strokeWidth: 2 }),
+          ticks, labels, hands,
+          h("circle", { cx: C, cy: C, r: 11, fill: "url(#brass)", stroke: "#2c1e12", strokeWidth: 2 }),
+          h("circle", { cx: C, cy: C, r: 3.5, fill: "#2c1e12" })
+        )
+      );
+    }
+
+    // ── 控制卡 ──
+    function ControlCard({ row, locked, onSetStatus, onSetMode }) {
+      const meta = statusMeta(row.status);
+      const head = h("div", { className: "card-head" },
+        h("span", { className: "card-icon" }, row.icon),
+        h("span", { className: "card-name" }, row.display_name),
+        h("span", { className: "card-now" }, meta.emoji + " " + meta.label)
+      );
+
+      if (locked) {
+        return h("div", { className: "card" }, head,
+          h("div", { className: "locked-note" }, "🔒 由 Claude 掌管（MCP 更新）")
+        );
+      }
+
+      const modeRow = h("div", { className: "mode-row" },
+        h("span", { className: "mode-label" }, "模式"),
+        h("div", { className: "toggle" },
+          h("button", { className: row.mode === "auto" ? "on" : "", onClick: () => onSetMode("auto") }, "自动"),
+          h("button", { className: row.mode === "manual" ? "on" : "", onClick: () => onSetMode("manual") }, "手动")
+        )
+      );
+
+      const chips = h("div", { className: "chips" },
+        STATUSES.map((s) =>
+          h("div", {
+            key: s.key,
+            className: "chip" + (s.key === row.status ? " active" : ""),
+            onClick: () => onSetStatus(s.key),
+          }, h("span", { className: "e" }, s.emoji), s.label)
+        )
+      );
+
+      return h("div", { className: "card" }, head, modeRow, chips);
+    }
+
+    // ── App ──
+    function App() {
+      const [rows, setRows] = React.useState([]);
+      const [conn, setConn] = React.useState("loading"); // loading | ok | err
+      const rowsRef = React.useRef([]);
+      rowsRef.current = rows;
+
+      const load = React.useCallback(async () => {
+        try {
+          const data = await fetchStatus();
+          setRows(data);
+          setConn("ok");
+          return data;
+        } catch (e) {
+          setConn("err");
+          return null;
+        }
+      }, []);
+
+      // 自动模式评估（前端驱动，仅在状态真正变化时写库）
+      const runAuto = React.useCallback(async (data) => {
+        const now = new Date();
+        const jobs = [];
+        for (const row of data) {
+          let mode = row.mode;
+          // 手动到期 → 回到自动
+          if (mode === "manual" && row.manual_until && new Date(row.manual_until) <= now) {
+            mode = "auto";
+            jobs.push(patchStatus(row.entity_id, { mode: "auto" }).catch(() => {}));
+          }
+          if (mode !== "auto") continue;
+          if (row.entity_id === "cloud") {
+            const target = cloudAutoStatus(now);
+            if (target !== row.status) jobs.push(patchStatus("cloud", { status: target }).catch(() => {}));
+          } else if (row.entity_id === "owl") {
+            if (Math.random() < 0.12) {
+              const target = owlAutoRoll();
+              if (target !== row.status) jobs.push(patchStatus("owl", { status: target }).catch(() => {}));
+            }
+          }
+        }
+        if (jobs.length) { await Promise.all(jobs); await load(); }
+      }, [load]);
+
+      React.useEffect(() => {
+        let alive = true;
+        (async () => {
+          const data = await load();
+          if (alive && data) runAuto(data);
+        })();
+        const id = setInterval(async () => {
+          const data = await load();
+          if (alive && data) runAuto(data);
+        }, POLL_MS);
+        return () => { alive = false; clearInterval(id); };
+      }, [load, runAuto]);
+
+      // 乐观更新 + 持久化
+      const optimistic = (entityId, patch) => {
+        setRows((prev) => prev.map((r) => (r.entity_id === entityId ? { ...r, ...patch } : r)));
+      };
+      const setStatus = (entityId) => (statusKey) => {
+        const manual_until = nextAutoBoundary(new Date());
+        optimistic(entityId, { status: statusKey, mode: "manual", manual_until });
+        patchStatus(entityId, { status: statusKey, mode: "manual", manual_until }).then(load).catch(() => setConn("err"));
+      };
+      const setMode = (entityId) => (mode) => {
+        optimistic(entityId, { mode });
+        patchStatus(entityId, { mode }).then(async () => {
+          const data = await load();
+          if (data) runAuto(data);
+        }).catch(() => setConn("err"));
+      };
+
+      const byId = (id) => rows.find((r) => r.entity_id === id);
+      const connText = conn === "ok" ? "● 已连接钟面" : conn === "err" ? "● 连接失败，稍后重试" : "● 连接中…";
+
+      return h(React.Fragment, null,
+        h("div", { className: "brand" }, "LUMOS"),
+        h("div", { className: "tagline" }, "The Weasley Clock"),
+        h("div", { className: "conn " + (conn === "ok" ? "ok" : conn === "err" ? "err" : "") }, connText),
+        h(Clock, { rows }),
+        h("div", { className: "panel" },
+          byId("cloud") && h(ControlCard, { key: "cloud", row: byId("cloud"), locked: false, onSetStatus: setStatus("cloud"), onSetMode: setMode("cloud") }),
+          byId("owl") && h(ControlCard, { key: "owl", row: byId("owl"), locked: false, onSetStatus: setStatus("owl"), onSetMode: setMode("owl") }),
+          byId("crab") && h(ControlCard, { key: "crab", row: byId("crab"), locked: true })
+        ),
+        h("div", { className: "footer" }, "Mischief Managed")
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+  </script>
+</body>
+</html>
