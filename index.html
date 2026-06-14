@@ -220,9 +220,9 @@
 
     // 指针外观：长度不同避免重叠
     const HAND_STYLE = {
-      cloud: { len: 134, color: "#cfd8dc" },
-      crab:  { len: 108, color: "#e08a5a" },
-      owl:   { len: 82,  color: "#f0e6d2" },
+      cloud: { len: 152, color: "#aebfc7" },
+      crab:  { len: 120, color: "#d98050" },
+      owl:   { len: 92,  color: "#efe6d2" },
     };
 
     // ── 自动逻辑 ──
@@ -271,19 +271,33 @@
 
     // ── 钟面 ──
     function Clock({ rows }) {
-      const C = 200, R = 150, rLabel = 168;
-      const ticks = [];
-      const labels = [];
+      const C = 220;
+      const rLabel = 150, rTick = 184, rDiv1 = 122, rDiv2 = 188, rSun1 = 24, rSun2 = 112;
+      const polar = (r, deg) => {
+        const a = (deg - 90) * Math.PI / 180;
+        return [C + r * Math.cos(a), C + r * Math.sin(a)];
+      };
+
+      // 放射光芒（电影同款，刻在钟心）
+      const sun = [];
+      for (let d = 0; d < 360; d += 10) {
+        const [x1, y1] = polar(rSun1, d), [x2, y2] = polar(rSun2, d);
+        sun.push(h("line", { key: "s" + d, x1, y1, x2, y2, stroke: "#b89043", strokeWidth: d % 30 === 0 ? 1 : 0.6, opacity: 0.22 }));
+      }
+
+      // 九个位置：分格线 + 刻度 + 标签
+      const dividers = [], ticks = [], labels = [];
       STATUSES.forEach((s, i) => {
-        const ang = (i * 40 - 90) * Math.PI / 180;
-        const lx = C + rLabel * Math.cos(ang);
-        const ly = C + rLabel * Math.sin(ang);
-        const tx1 = C + (R - 6) * Math.cos(ang), ty1 = C + (R - 6) * Math.sin(ang);
-        const tx2 = C + R * Math.cos(ang), ty2 = C + R * Math.sin(ang);
-        ticks.push(h("line", { key: "t" + i, x1: tx1, y1: ty1, x2: tx2, y2: ty2, stroke: "#8a6a2f", strokeWidth: 2 }));
+        const deg = i * 40;
+        const dDeg = deg + 20; // 分隔线落在两个位置之间
+        const [dx1, dy1] = polar(rDiv1, dDeg), [dx2, dy2] = polar(rDiv2, dDeg);
+        dividers.push(h("line", { key: "d" + i, x1: dx1, y1: dy1, x2: dx2, y2: dy2, stroke: "#9a7733", strokeWidth: 1, opacity: 0.45 }));
+        const [tx1, ty1] = polar(rTick, deg), [tx2, ty2] = polar(rTick + 6, deg);
+        ticks.push(h("line", { key: "t" + i, x1: tx1, y1: ty1, x2: tx2, y2: ty2, stroke: "#7a5c28", strokeWidth: 2 }));
+        const [lx, ly] = polar(rLabel, deg);
         labels.push(
           h("g", { key: "l" + i, textAnchor: "middle" },
-            h("text", { x: lx, y: ly - 4, fontSize: 17 }, s.emoji),
+            h("text", { x: lx, y: ly - 5, fontSize: 22 }, s.emoji),
             h("text", { x: lx, y: ly + 13, className: "status-cn" }, s.label)
           )
         );
@@ -294,35 +308,48 @@
         if (!row) return null;
         const st = HAND_STYLE[id];
         const idx = STATUS_INDEX[row.status] ?? 0;
-        const deg = idx * 40; // 0 = 指向 12 点（已经把 12 点设为 index0）
+        const deg = idx * 40;
         const tipY = C - st.len;
+        const shaft = [
+          [C - 4, C + 8], [C + 4, C + 8],
+          [C + 1.6, tipY + 14], [C - 1.6, tipY + 14],
+        ].map((p) => p.join(",")).join(" ");
         return h("g", { key: id, className: "hand", style: { transform: "rotate(" + deg + "deg)" } },
-          h("line", { x1: C, y1: C, x2: C, y2: C - st.len + 14, stroke: st.color, strokeWidth: 4, strokeLinecap: "round" }),
-          h("circle", { cx: C, cy: tipY, r: 15, fill: "#2c1e12", stroke: st.color, strokeWidth: 2 }),
-          h("text", { x: C, y: tipY + 6, textAnchor: "middle", fontSize: 16 }, row.icon)
+          h("polygon", { points: shaft, fill: st.color, stroke: "#2c1e12", strokeWidth: 0.6 }),
+          h("circle", { cx: C, cy: tipY, r: 17, fill: "#241910", stroke: st.color, strokeWidth: 2.5 }),
+          h("circle", { cx: C, cy: tipY, r: 17, fill: "none", stroke: "#e6c87a", strokeWidth: 0.6, opacity: 0.5 }),
+          h("text", { x: C, y: tipY + 6, textAnchor: "middle", fontSize: 17 }, row.icon)
         );
       });
 
       return h("div", { className: "clock-wrap" },
-        h("svg", { viewBox: "0 0 400 400" },
+        h("svg", { viewBox: "0 0 440 440" },
           h("defs", null,
-            h("radialGradient", { id: "face", cx: "50%", cy: "42%", r: "62%" },
-              h("stop", { offset: "0%", stopColor: "#f6ead0" }),
-              h("stop", { offset: "100%", stopColor: "#e3cd9c" })
+            h("radialGradient", { id: "face", cx: "50%", cy: "40%", r: "65%" },
+              h("stop", { offset: "0%", stopColor: "#f6ecd2" }),
+              h("stop", { offset: "72%", stopColor: "#e7d2a4" }),
+              h("stop", { offset: "100%", stopColor: "#d8be8b" })
             ),
             h("linearGradient", { id: "brass", x1: "0", y1: "0", x2: "0", y2: "1" },
-              h("stop", { offset: "0%", stopColor: "#e6c87a" }),
-              h("stop", { offset: "50%", stopColor: "#c9a253" }),
+              h("stop", { offset: "0%", stopColor: "#f0d493" }),
+              h("stop", { offset: "45%", stopColor: "#c9a253" }),
+              h("stop", { offset: "100%", stopColor: "#7c5d28" })
+            ),
+            h("radialGradient", { id: "hub", cx: "38%", cy: "34%", r: "70%" },
+              h("stop", { offset: "0%", stopColor: "#f0d493" }),
               h("stop", { offset: "100%", stopColor: "#8a6a2f" })
             )
           ),
-          h("circle", { cx: C, cy: C, r: 195, fill: "url(#brass)" }),
-          h("circle", { cx: C, cy: C, r: 182, fill: "#2c1e12" }),
-          h("circle", { cx: C, cy: C, r: 176, fill: "url(#brass)" }),
-          h("circle", { cx: C, cy: C, r: 164, fill: "url(#face)", stroke: "#8a6a2f", strokeWidth: 2 }),
-          ticks, labels, hands,
-          h("circle", { cx: C, cy: C, r: 11, fill: "url(#brass)", stroke: "#2c1e12", strokeWidth: 2 }),
-          h("circle", { cx: C, cy: C, r: 3.5, fill: "#2c1e12" })
+          h("circle", { cx: C, cy: C, r: 216, fill: "url(#brass)" }),
+          h("circle", { cx: C, cy: C, r: 205, fill: "#241910" }),
+          h("circle", { cx: C, cy: C, r: 200, fill: "url(#brass)" }),
+          h("circle", { cx: C, cy: C, r: 192, fill: "url(#face)", stroke: "#7c5d28", strokeWidth: 1.5 }),
+          h("g", null, sun),
+          h("circle", { cx: C, cy: C, r: 120, fill: "none", stroke: "#9a7733", strokeWidth: 1, opacity: 0.45 }),
+          h("circle", { cx: C, cy: C, r: 188, fill: "none", stroke: "#9a7733", strokeWidth: 1, opacity: 0.45 }),
+          dividers, ticks, labels, hands,
+          h("circle", { cx: C, cy: C, r: 15, fill: "url(#hub)", stroke: "#241910", strokeWidth: 2 }),
+          h("circle", { cx: C, cy: C, r: 5, fill: "#241910" })
         )
       );
     }
