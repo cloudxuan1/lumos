@@ -257,11 +257,11 @@
     const STATUS_INDEX = Object.fromEntries(STATUSES.map((s, i) => [s.key, i]));
     const statusMeta = (key) => STATUSES[STATUS_INDEX[key]] || STATUSES[0];
 
-    // 指针外观：长度不同避免重叠
+    // 指针外观：长度错开防重叠；勺柄用金属渐变 + 深色描边
     const HAND_STYLE = {
-      cloud: { len: 152, color: "#aebfc7" },
-      crab:  { len: 120, color: "#d98050" },
-      owl:   { len: 92,  color: "#efe6d2" },
+      cloud: { len: 152, grad: "metalSilver", line: "#586066" },
+      crab:  { len: 120, grad: "metalBronze", line: "#73441f" },
+      owl:   { len: 92,  grad: "metalGold",   line: "#7c5d28" },
     };
 
     // ── 自动逻辑 ──
@@ -362,16 +362,26 @@
 
       const hands = handData.map((d) => {
         const { id, row, st, deg, tipY } = d;
+        const L = C - tipY;                       // 钟心到相框的杆长
+        const yAt = (t) => tipY + t * L;          // t=0 相框端，t=1 钟心端
+        // 勺柄 baluster 半宽剖面：相框颈 → 上握球 → 收腰 → 下腹鼓 → 近钟心
+        const prof = [[0.00, 3.2], [0.12, 5.2], [0.40, 2.3], [0.72, 5.8], [0.90, 3.4]];
+        const right = prof.map(([t, w]) => [C + w, yAt(t)]);
+        const left = prof.slice().reverse().map(([t, w]) => [C - w, yAt(t)]);
         const shaft = [
-          [C - 4.5, C + 10], [C + 4.5, C + 10],
-          [C + 2.2, tipY + 14], [C - 2.2, tipY + 14],
+          ...right,
+          [C + 3.6, C + 4], [C, C + 17],          // 尾部收尖（钟心另一侧的小配重）
+          [C - 3.6, C + 4],
+          ...left,
         ].map((p) => p.join(",")).join(" ");
+        const knopY = yAt(0.12);
         const portrait = avatars && avatars[id]
           ? h("image", { href: avatars[id], xlinkHref: avatars[id], x: C - 14, y: tipY - 17.5, width: 28, height: 35, preserveAspectRatio: "xMidYMid slice", clipPath: "url(#clip-" + id + ")" })
           : h("text", { x: C, y: tipY + 6, textAnchor: "middle", fontSize: 17 }, row.icon);
         return h("g", { key: id, className: "hand", style: { transform: "rotate(" + deg + "deg)" } },
-          h("polygon", { points: shaft, fill: st.color, stroke: "#241910", strokeWidth: 0.7 }),
-          h("ellipse", { cx: C, cy: tipY, rx: 16, ry: 19.5, fill: "#241910", stroke: st.color, strokeWidth: 2.5 }),
+          h("polygon", { points: shaft, fill: "url(#" + st.grad + ")", stroke: st.line, strokeWidth: 1, strokeLinejoin: "round" }),
+          h("circle", { cx: C, cy: knopY, r: 3.4, fill: "url(#" + st.grad + ")", stroke: st.line, strokeWidth: 0.8 }),
+          h("ellipse", { cx: C, cy: tipY, rx: 16.5, ry: 20, fill: "#241910", stroke: "url(#" + st.grad + ")", strokeWidth: 3 }),
           portrait,
           h("ellipse", { cx: C, cy: tipY, rx: 14, ry: 17.5, fill: "none", stroke: "#e6c87a", strokeWidth: 0.8, opacity: 0.6 })
         );
@@ -392,6 +402,21 @@
             ),
             h("radialGradient", { id: "hub", cx: "38%", cy: "34%", r: "70%" },
               h("stop", { offset: "0%", stopColor: "#f0d493" }),
+              h("stop", { offset: "100%", stopColor: "#8a6a2f" })
+            ),
+            h("linearGradient", { id: "metalSilver", x1: "0", y1: "0", x2: "0", y2: "1" },
+              h("stop", { offset: "0%", stopColor: "#eef3f5" }),
+              h("stop", { offset: "45%", stopColor: "#aeb9bf" }),
+              h("stop", { offset: "100%", stopColor: "#6b757b" })
+            ),
+            h("linearGradient", { id: "metalBronze", x1: "0", y1: "0", x2: "0", y2: "1" },
+              h("stop", { offset: "0%", stopColor: "#e9b985" }),
+              h("stop", { offset: "45%", stopColor: "#c2854f" }),
+              h("stop", { offset: "100%", stopColor: "#7a4a28" })
+            ),
+            h("linearGradient", { id: "metalGold", x1: "0", y1: "0", x2: "0", y2: "1" },
+              h("stop", { offset: "0%", stopColor: "#f2dfa6" }),
+              h("stop", { offset: "45%", stopColor: "#cdaa5e" }),
               h("stop", { offset: "100%", stopColor: "#8a6a2f" })
             ),
             clipDefs
