@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Lumos · 韦斯莱时钟</title>
+  <meta name="theme-color" content="#1b130c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Lumos" />
+  <link rel="apple-touch-icon" id="appIcon" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet" />
@@ -191,6 +197,30 @@
   <script>
     const h = React.createElement;
 
+    // iPhone「添加到主屏幕」图标：Canvas 画黄铜时钟，设为 apple-touch-icon
+    (function setAppIcon() {
+      try {
+        const S = 180, cv = document.createElement("canvas");
+        cv.width = S; cv.height = S;
+        const x = cv.getContext("2d");
+        const g = x.createLinearGradient(0, 0, 0, S);
+        g.addColorStop(0, "#e6c87a"); g.addColorStop(0.5, "#c9a253"); g.addColorStop(1, "#7c5d28");
+        x.fillStyle = g; x.fillRect(0, 0, S, S);
+        const cx = S / 2, cy = S / 2;
+        x.beginPath(); x.arc(cx, cy, 74, 0, Math.PI * 2); x.fillStyle = "#efdcab"; x.fill();
+        x.lineWidth = 9; x.strokeStyle = "#7c5d28"; x.stroke();
+        [[-90, 56, "#9aa7ad"], [25, 46, "#c98a55"], [150, 36, "#b9a06a"]].forEach(([deg, len, col]) => {
+          const a = deg * Math.PI / 180;
+          x.beginPath(); x.moveTo(cx, cy);
+          x.lineTo(cx + len * Math.cos(a), cy + len * Math.sin(a));
+          x.lineWidth = 6; x.lineCap = "round"; x.strokeStyle = col; x.stroke();
+        });
+        x.beginPath(); x.arc(cx, cy, 8, 0, Math.PI * 2); x.fillStyle = "#241910"; x.fill();
+        const link = document.getElementById("appIcon");
+        if (link) link.setAttribute("href", cv.toDataURL("image/png"));
+      } catch (e) {}
+    })();
+
     // ── 配置：Supabase URL 从 hash / localStorage 取，不写死 ──
     // 支持 #https://xxx.supabase.co 直接带入；否则走首次设定页 SetupScreen
     function getApiUrl() {
@@ -221,7 +251,7 @@
       { key: "travel",   emoji: "🚶", label: "在路上", en: "TRAVELLING" },
       { key: "playing",  emoji: "🎮", label: "在玩",   en: "PLAYING" },
       { key: "sleeping", emoji: "💤", label: "在睡觉", en: "BED" },
-      { key: "study",    emoji: "📚", label: "在学习", en: "STUDY" },
+      { key: "study",    emoji: "💭", label: "在思考", en: "THINKING" },
       { key: "peril",    emoji: "⚠️", label: "性命攸关", en: "MORTAL PERIL" },
     ];
     const STATUS_INDEX = Object.fromEntries(STATUSES.map((s, i) => [s.key, i]));
@@ -301,13 +331,17 @@
         scallop.push(h("circle", { key: "sc" + d, cx, cy, r: 2.4, fill: "#b89043", opacity: 0.5 }));
       }
 
-      // 英文位置名沿弧排（无 emoji，底部像电影一样绕着倒过来）
+      // 英文位置名沿弧排（无 emoji，每个独立旋转，底部翻正保证可读、不被接缝裁切）
       const labels = STATUSES.map((s, i) => {
         const deg = i * 40;
-        const pct = (deg / 360) * 100;
+        const flip = deg > 90 && deg < 270;
         const fs = s.en.length >= 10 ? 11 : s.en.length >= 7 ? 13 : 16;
-        return h("text", { key: "l" + i, className: "arc-label", fontSize: fs },
-          h("textPath", { href: "#labelPath", xlinkHref: "#labelPath", startOffset: pct + "%", textAnchor: "middle" }, s.en)
+        const tx = C, ty = C - rBand;
+        return h("g", { key: "l" + i, transform: "rotate(" + deg + " " + C + " " + C + ")" },
+          h("text", {
+            x: tx, y: ty, className: "arc-label", fontSize: fs, textAnchor: "middle",
+            transform: flip ? "rotate(180 " + tx + " " + ty + ")" : undefined,
+          }, s.en)
         );
       });
 
@@ -346,8 +380,6 @@
       return h("div", { className: "clock-wrap" },
         h("svg", { viewBox: "0 0 440 440" },
           h("defs", null,
-            h("path", { id: "labelPath", fill: "none",
-              d: "M " + C + "," + (C - rBand) + " A " + rBand + "," + rBand + " 0 1 1 " + (C - 0.01) + "," + (C - rBand) }),
             h("radialGradient", { id: "face", cx: "50%", cy: "42%", r: "62%" },
               h("stop", { offset: "0%", stopColor: "#efdcab" }),
               h("stop", { offset: "70%", stopColor: "#e3c98e" }),
