@@ -14,7 +14,7 @@ const supabase = createClient(
 
 const VALID_STATUS = [
   "home", "work", "overtime", "slacking", "travel",
-  "playing", "sleeping", "study", "peril",
+  "playing", "sleeping", "thinking", "peril",
 ];
 const VALID_MODE = ["manual", "auto"];
 const VALID_ENTITY = ["cloud", "crab", "owl"];
