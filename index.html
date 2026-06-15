@@ -64,7 +64,7 @@
       width: min(92vw, 420px);
       aspect-ratio: 1 / 1;
       margin-bottom: 26px;
-      filter: drop-shadow(0 14px 26px rgba(0,0,0,.55));
+      filter: drop-shadow(0 18px 28px rgba(0,0,0,.62));
     }
     .clock-wrap svg { width: 100%; height: 100%; display: block; }
     .arc-label {
@@ -73,6 +73,9 @@
       fill: #2e2012;
       letter-spacing: 1px;
       dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: rgba(239,220,171,.34);
+      stroke-width: .7px;
     }
     .hand { transition: transform .9s cubic-bezier(.34,1.4,.5,1); transform-box: view-box; transform-origin: 220px 220px; }
     .panel {
@@ -259,9 +262,9 @@
 
     // 指针外观：长度不同避免重叠
     const HAND_STYLE = {
-      cloud: { len: 152, color: "#aebfc7" },
-      crab:  { len: 120, color: "#d98050" },
-      owl:   { len: 92,  color: "#efe6d2" },
+      cloud: { len: 150, color: "#b8c7c2", light: "#e8f0e5", dark: "#65736f" },
+      crab:  { len: 122, color: "#c98755", light: "#e7ba79", dark: "#7a4029" },
+      owl:   { len: 94,  color: "#efe2c5", light: "#fff4d6", dark: "#8f7749" },
     };
 
     // ── 自动逻辑 ──
@@ -311,7 +314,7 @@
     // ── 钟面 ──
     function Clock({ rows, avatars }) {
       const C = 220;
-      const rBand = 162, rSun1 = 30, rSun2 = 120;
+      const rBand = 163, rSun1 = 32, rSun2 = 126;
       const polar = (r, deg) => {
         const a = (deg - 90) * Math.PI / 180;
         return [C + r * Math.cos(a), C + r * Math.sin(a)];
@@ -327,8 +330,21 @@
       // 外缘波浪花边的小圆点
       const scallop = [];
       for (let d = 0; d < 360; d += 7.5) {
-        const [cx, cy] = polar(186, d);
-        scallop.push(h("circle", { key: "sc" + d, cx, cy, r: 2.4, fill: "#b89043", opacity: 0.5 }));
+        const [cx, cy] = polar(187, d);
+        scallop.push(h("circle", { key: "sc" + d, cx, cy, r: 2.1, fill: "#b89043", opacity: 0.42 }));
+      }
+
+      const ticks = [];
+      for (let d = 0; d < 360; d += 5) {
+        const major = d % 40 === 0;
+        const [x1, y1] = polar(major ? 135 : 171, d);
+        const [x2, y2] = polar(major ? 187 : 180, d);
+        ticks.push(h("line", {
+          key: "t" + d, x1, y1, x2, y2,
+          stroke: major ? "#7c5d28" : "#aa8238",
+          strokeWidth: major ? 1.15 : 0.55,
+          opacity: major ? 0.42 : 0.28,
+        }));
       }
 
       // 英文位置名沿弧排（无 emoji，每个独立旋转，底部翻正保证可读、不被接缝裁切）
@@ -345,7 +361,7 @@
         );
       });
 
-      // 三根勺形指针 + 椭圆相框（照片或 emoji）
+      // 三根魔法定位针 + 圆形黄铜相框（照片或 emoji）
       const handData = ["cloud", "crab", "owl"].map((id) => {
         const row = rows.find((r) => r.entity_id === id);
         if (!row) return null;
@@ -356,24 +372,39 @@
 
       const clipDefs = handData.map((d) =>
         h("clipPath", { key: "c" + d.id, id: "clip-" + d.id },
-          h("ellipse", { cx: C, cy: d.tipY, rx: 14, ry: 17.5 })
+          h("circle", { cx: C, cy: d.tipY, r: 17 })
+        )
+      );
+
+      const handGradDefs = handData.map((d) =>
+        h("linearGradient", { key: "hg" + d.id, id: "hand-" + d.id, x1: C, y1: d.tipY, x2: C, y2: C + 18, gradientUnits: "userSpaceOnUse" },
+          h("stop", { offset: "0%", stopColor: d.st.light }),
+          h("stop", { offset: "42%", stopColor: d.st.color }),
+          h("stop", { offset: "100%", stopColor: d.st.dark })
         )
       );
 
       const hands = handData.map((d) => {
         const { id, row, st, deg, tipY } = d;
         const shaft = [
-          [C - 4.5, C + 10], [C + 4.5, C + 10],
-          [C + 2.2, tipY + 14], [C - 2.2, tipY + 14],
+          [C - 5.5, C + 17], [C + 5.5, C + 17],
+          [C + 3.2, tipY + 42], [C + 9.5, tipY + 40],
+          [C, tipY + 15],
+          [C - 9.5, tipY + 40], [C - 3.2, tipY + 42],
         ].map((p) => p.join(",")).join(" ");
         const portrait = avatars && avatars[id]
-          ? h("image", { href: avatars[id], xlinkHref: avatars[id], x: C - 14, y: tipY - 17.5, width: 28, height: 35, preserveAspectRatio: "xMidYMid slice", clipPath: "url(#clip-" + id + ")" })
+          ? h("image", { href: avatars[id], xlinkHref: avatars[id], x: C - 17, y: tipY - 17, width: 34, height: 34, preserveAspectRatio: "xMidYMid slice", clipPath: "url(#clip-" + id + ")" })
           : h("text", { x: C, y: tipY + 6, textAnchor: "middle", fontSize: 17 }, row.icon);
         return h("g", { key: id, className: "hand", style: { transform: "rotate(" + deg + "deg)" } },
-          h("polygon", { points: shaft, fill: st.color, stroke: "#241910", strokeWidth: 0.7 }),
-          h("ellipse", { cx: C, cy: tipY, rx: 16, ry: 19.5, fill: "#241910", stroke: st.color, strokeWidth: 2.5 }),
+          h("path", { d: "M" + C + " " + (C + 18) + " L" + C + " " + (tipY + 18), stroke: "#120c08", strokeWidth: 11, strokeLinecap: "round", opacity: 0.18 }),
+          h("polygon", { points: shaft, fill: "url(#hand-" + id + ")", stroke: "#241910", strokeWidth: 0.85, strokeLinejoin: "round" }),
+          h("path", { d: "M" + C + " " + (C + 11) + " L" + C + " " + (tipY + 35), stroke: "#f1dc9e", strokeWidth: 1.2, strokeLinecap: "round", opacity: 0.55 }),
+          h("circle", { cx: C, cy: tipY + 23, r: 3.4, fill: "#e6c87a", stroke: "#241910", strokeWidth: 0.7 }),
+          h("circle", { cx: C, cy: tipY, r: 23, fill: "url(#brass)", stroke: "#241910", strokeWidth: 1.3 }),
+          h("circle", { cx: C, cy: tipY, r: 19, fill: "#241910", stroke: st.light, strokeWidth: 2.2 }),
           portrait,
-          h("ellipse", { cx: C, cy: tipY, rx: 14, ry: 17.5, fill: "none", stroke: "#e6c87a", strokeWidth: 0.8, opacity: 0.6 })
+          h("circle", { cx: C, cy: tipY, r: 17, fill: "none", stroke: "#e6c87a", strokeWidth: 0.8, opacity: 0.72 }),
+          h("path", { d: "M" + (C - 10) + " " + (tipY - 12) + " Q" + C + " " + (tipY - 18) + " " + (C + 10) + " " + (tipY - 12), fill: "none", stroke: "#fff2bf", strokeWidth: 1, opacity: 0.5 })
         );
       });
 
@@ -394,20 +425,28 @@
               h("stop", { offset: "0%", stopColor: "#f0d493" }),
               h("stop", { offset: "100%", stopColor: "#8a6a2f" })
             ),
+            h("filter", { id: "innerShadow", x: "-20%", y: "-20%", width: "140%", height: "140%" },
+              h("feDropShadow", { dx: 0, dy: 2, stdDeviation: 2, floodColor: "#4d3216", floodOpacity: 0.42 })
+            ),
+            handGradDefs,
             clipDefs
           ),
           h("circle", { cx: C, cy: C, r: 216, fill: "url(#brass)" }),
+          h("circle", { cx: C, cy: C, r: 212, fill: "none", stroke: "#f5d98f", strokeWidth: 3, opacity: 0.55 }),
           h("circle", { cx: C, cy: C, r: 205, fill: "#241910" }),
           h("circle", { cx: C, cy: C, r: 200, fill: "url(#brass)" }),
-          h("circle", { cx: C, cy: C, r: 192, fill: "url(#face)", stroke: "#7c5d28", strokeWidth: 1.5 }),
+          h("circle", { cx: C, cy: C, r: 195, fill: "none", stroke: "#f1d48a", strokeWidth: 2, opacity: 0.62 }),
+          h("circle", { cx: C, cy: C, r: 190, fill: "url(#face)", stroke: "#7c5d28", strokeWidth: 1.5, filter: "url(#innerShadow)" }),
           h("g", null, sun),
-          h("circle", { cx: C, cy: C, r: 176, fill: "none", stroke: "#9a7733", strokeWidth: 1, opacity: 0.4 }),
-          h("circle", { cx: C, cy: C, r: 142, fill: "none", stroke: "#9a7733", strokeWidth: 0.8, opacity: 0.3 }),
+          h("circle", { cx: C, cy: C, r: 176, fill: "none", stroke: "#9a7733", strokeWidth: 1, opacity: 0.36 }),
+          h("circle", { cx: C, cy: C, r: 139, fill: "none", stroke: "#9a7733", strokeWidth: 0.8, opacity: 0.26 }),
+          h("g", null, ticks),
           h("g", null, scallop),
           h("g", null, labels),
           hands,
-          h("circle", { cx: C, cy: C, r: 15, fill: "url(#hub)", stroke: "#241910", strokeWidth: 2 }),
-          h("circle", { cx: C, cy: C, r: 5, fill: "#241910" })
+          h("circle", { cx: C, cy: C, r: 18, fill: "url(#brass)", stroke: "#241910", strokeWidth: 2 }),
+          h("circle", { cx: C, cy: C, r: 12, fill: "url(#hub)", stroke: "#f0d493", strokeWidth: 1 }),
+          h("circle", { cx: C, cy: C, r: 4.5, fill: "#241910" })
         )
       );
     }
