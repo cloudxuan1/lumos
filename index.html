@@ -94,7 +94,9 @@
       width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
       border: 2px solid var(--brass); box-shadow: 0 0 0 1px var(--brass-dark);
     }
-    .photo-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .ctrl-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .photo-group { display: flex; align-items: center; gap: 8px; }
+    .mode-group { display: flex; align-items: center; gap: 8px; }
     .photo-btn {
       border: 1px solid var(--brass-dark); border-radius: 8px;
       background: rgba(0,0,0,.2); color: var(--brass-light);
@@ -111,7 +113,6 @@
       border: 1px solid var(--brass-dark);
       border-radius: 999px; padding: 3px 10px; white-space: nowrap;
     }
-    .mode-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .mode-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
     .toggle {
       display: inline-flex; border: 1px solid var(--brass-dark); border-radius: 999px;
@@ -473,7 +474,7 @@
         h("span", { className: "card-now" }, meta.emoji + " " + meta.label)
       );
 
-      const photoRow = h("div", { className: "photo-row" },
+      const photoGroup = h("div", { className: "photo-group" },
         h("input", {
           ref: fileRef, type: "file", accept: "image/*", style: { display: "none" },
           onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) onAvatarFile(f); e.target.value = ""; },
@@ -483,12 +484,13 @@
       );
 
       if (locked) {
-        return h("div", { className: "card" }, head, photoRow,
+        return h("div", { className: "card" }, head,
+          h("div", { className: "ctrl-row" }, photoGroup),
           h("div", { className: "locked-note" }, "🔒 由 Claude 掌管（MCP 更新）")
         );
       }
 
-      const modeRow = h("div", { className: "mode-row" },
+      const modeGroup = h("div", { className: "mode-group" },
         h("span", { className: "mode-label" }, "模式"),
         h("div", { className: "toggle" },
           h("button", { className: row.mode === "auto" ? "on" : "", onClick: () => onSetMode("auto") }, "自动"),
@@ -506,7 +508,10 @@
         )
       );
 
-      return h("div", { className: "card" }, head, photoRow, modeRow, chips);
+      return h("div", { className: "card" }, head,
+        h("div", { className: "ctrl-row" }, photoGroup, modeGroup),
+        chips
+      );
     }
 
     // ── 首次设定页：填 Supabase Project URL ──
