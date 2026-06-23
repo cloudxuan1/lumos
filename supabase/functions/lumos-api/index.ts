@@ -17,7 +17,7 @@ const VALID_STATUS = [
   "playing", "sleeping", "thinking", "peril",
 ];
 const VALID_MODE = ["manual", "auto"];
-const VALID_ENTITY = ["cloud", "crab", "owl"];
+const VALID_ENTITY = ["cloud", "claude", "owl"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

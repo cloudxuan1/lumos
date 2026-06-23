@@ -260,7 +260,7 @@
     // 指针外观：长度错开防重叠；勺柄用金属渐变 + 深色描边
     const HAND_STYLE = {
       cloud: { len: 152, grad: "metalSilver", line: "#586066" },
-      crab:  { len: 120, grad: "metalBronze", line: "#73441f" },
+      claude: { len: 120, grad: "metalBronze", line: "#73441f" },
       owl:   { len: 92,  grad: "metalGold",   line: "#7c5d28" },
     };
 
@@ -346,7 +346,7 @@
       });
 
       // 三根勺形指针 + 椭圆相框（照片或 emoji）
-      const handData = ["cloud", "crab", "owl"].map((id) => {
+      const handData = ["cloud", "claude", "owl"].map((id) => {
         const row = rows.find((r) => r.entity_id === id);
         if (!row) return null;
         const st = HAND_STYLE[id];
@@ -571,7 +571,7 @@
       // 头像存浏览器本地（dataURL），跨设备同步以后再做数据库
       const [avatars, setAvatars] = React.useState(() => {
         const o = {};
-        ["cloud", "crab", "owl"].forEach((id) => {
+        ["cloud", "claude", "owl"].forEach((id) => {
           try { o[id] = localStorage.getItem("lumos_avatar_" + id) || null; } catch (e) { o[id] = null; }
         });
         return o;
@@ -674,7 +674,7 @@
         h("div", { className: "panel" },
           byId("cloud") && h(ControlCard, { key: "cloud", row: byId("cloud"), locked: false, avatar: avatars.cloud, onSetStatus: setStatus("cloud"), onSetMode: setMode("cloud"), onAvatarFile: handleAvatarFile("cloud"), onAvatarClear: () => setAvatar("cloud", null) }),
           byId("owl") && h(ControlCard, { key: "owl", row: byId("owl"), locked: false, avatar: avatars.owl, onSetStatus: setStatus("owl"), onSetMode: setMode("owl"), onAvatarFile: handleAvatarFile("owl"), onAvatarClear: () => setAvatar("owl", null) }),
-          byId("crab") && h(ControlCard, { key: "crab", row: byId("crab"), locked: true, avatar: avatars.crab, onAvatarFile: handleAvatarFile("crab"), onAvatarClear: () => setAvatar("crab", null) })
+          byId("claude") && h(ControlCard, { key: "claude", row: byId("claude"), locked: true, avatar: avatars.claude, onAvatarFile: handleAvatarFile("claude"), onAvatarClear: () => setAvatar("claude", null) })
         ),
         h("button", { className: "change-url", onClick: changeUrl }, "更换 Supabase URL"),
         h("div", { className: "footer" }, "Mischief Managed")
